@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "927719778971",
+    "project_id": "mlritattendancesystem",
+    "storage_bucket": "mlritattendancesystem.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:927719778971:android:6b2c6c7ce65c006fe5b43e",
+        "android_client_info": {
+          "package_name": "com.example.hod_web_dashboard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_AOgfaCaUwlY7ntpWBO9FDuNkmTlaKQ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:927719778971:android:6d1b6a335ee0411fe5b43e",
+        "android_client_info": {
+          "package_name": "com.example.studentscanner"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB_AOgfaCaUwlY7ntpWBO9FDuNkmTlaKQ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
