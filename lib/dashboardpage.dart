@@ -1,4 +1,3 @@
-// Flutter impor
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hod_web_dashboard/applogin_page.dart';
@@ -151,27 +150,106 @@ class _DashboardPageState extends State<DashboardPage> {
                   final shouldLogout = await showDialog<bool>(
                     context: context,
                     builder:
-                        (context) => AlertDialog(
-                          title: const Text('Confirm Logout'),
-                          content: const Text(
-                            'Are you sure you want to logout?',
+                        (context) => Dialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
+                          elevation: 10,
+                          backgroundColor: Colors.white,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: 300,
+                              maxWidth: 400, // good for web dialogs
                             ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 32,
                               ),
-                              child: const Text(
-                                'Yes',
-                                style: TextStyle(color: Colors.white),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    "Confirm Logout? 😣",
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    "Are you sure you want to logout?",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.grey,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 32),
+                                  FractionallySizedBox(
+                                    widthFactor: 1,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF0746C5,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        elevation: 2,
+                                      ),
+                                      onPressed:
+                                          () => Navigator.pop(context, true),
+                                      child: const Text(
+                                        "Confirm Logout",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontSize: 17,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  FractionallySizedBox(
+                                    widthFactor: 1,
+                                    child: OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        side: const BorderSide(
+                                          color: Colors.grey,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      onPressed:
+                                          () => Navigator.pop(context, false),
+                                      child: const Text(
+                                        "No",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                   );
 
@@ -205,7 +283,7 @@ class _DashboardPageState extends State<DashboardPage> {
   /// Builds the top navigation bar with welcome message and search.
   Widget _buildTopBar() {
     return Container(
-      color: Colors.blue[800],
+      color: Color(0xFF0746C5),
       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -245,6 +323,19 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// Displays the branch-wise attendance tables and summaries.
   Widget _buildAttendanceOverview() {
+    final totalStudents = _yearDataCache.values.fold<int>(
+      0,
+      (p, e) => p + e.fold(0, (p2, r) => p2 + (r[1] as int)),
+    );
+
+    final totalAttended = _yearDataCache.values.fold<int>(
+      0,
+      (p, e) => p + e.fold(0, (p2, r) => p2 + (r[2] as int)),
+    );
+
+    final int percent =
+        totalStudents > 0 ? ((totalAttended / totalStudents) * 100).round() : 0;
+
     return Expanded(
       flex: 3,
       child:
@@ -256,15 +347,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   children: [
                     buildSummaryHeader(
                       DateFormat('dd/MM/yyyy').format(DateTime.now()),
-                      _yearDataCache.values.fold<int>(
-                        0,
-                        (p, e) => p + e.fold(0, (p2, r) => p2 + (r[1] as int)),
-                      ),
-                      _yearDataCache.values.fold<int>(
-                        0,
-                        (p, e) => p + e.fold(0, (p2, r) => p2 + (r[2] as int)),
-                      ),
-                      0, // Optionally compute overall % here
+                      totalStudents,
+                      totalAttended,
+                      percent,
                     ),
                     ..._endYears.map((endYear) {
                       Color color;
@@ -322,6 +407,7 @@ class _DashboardPageState extends State<DashboardPage> {
                 )
                 : AttendanceForm(
                   branchName: selectedBranch!,
+                  endYear: selectedYear!, // ✅ Make sure this is passed
                   cachedData: cachedStudentData[selectedBranch!],
                   onCacheUpdate: (data) {
                     setState(() {
@@ -346,7 +432,7 @@ Widget buildSummaryHeader(
     padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
     decoration: BoxDecoration(
       gradient: const LinearGradient(
-        colors: [Color(0xFF1976D2), Color(0xFF1976D2)],
+        colors: [Color(0xFF0746C5), Color(0xFF0746C5)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -488,7 +574,8 @@ Widget buildYearTable({
             // Table Body Rows
             ...data.map((row) {
               final isSelected =
-                  selectedBranch == row[0] && selectedYear == title;
+                  selectedBranch == row[0] &&
+                  selectedYear == title.split(" ").first;
 
               final Color rowBgColor =
                   isSelected
@@ -565,23 +652,36 @@ Widget buildYearTable({
         ),
 
         // Footer
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            color: gradient == null ? color?.withOpacity(0.85) : null,
-            borderRadius: const BorderRadius.vertical(
-              bottom: Radius.circular(12),
-            ),
-          ),
-          child: Text(
-            "$title Total: $total   0%   0%",
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
+        // Footer with actual attended and percentage
+        // Footer with actual attended and percentage
+        Builder(
+          builder: (_) {
+            final attended = data.fold<int>(
+              0,
+              (sum, row) =>
+                  sum + (row[2] as int), // Column index 2 = present count
+            );
+            final percent = total > 0 ? ((attended / total) * 100).round() : 0;
+
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                gradient: gradient,
+                color: gradient == null ? color?.withOpacity(0.85) : null,
+                borderRadius: const BorderRadius.vertical(
+                  bottom: Radius.circular(12),
+                ),
+              ),
+              child: Text(
+                "$title Total: $total   Attended: $attended   $percent%",
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            );
+          },
         ),
       ],
     ),

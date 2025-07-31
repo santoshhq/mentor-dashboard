@@ -17,7 +17,7 @@ class SidebarItem extends StatelessWidget {
     // sidebar_item.dart
     return Container(
       decoration: BoxDecoration(
-        color: selected ? Colors.blueAccent : Colors.transparent,
+        color: selected ? Color(0xFF0746C5) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),

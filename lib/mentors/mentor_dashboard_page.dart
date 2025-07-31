@@ -1,4 +1,3 @@
-// mentor_dashboard_page.dart (revised as clone of dashboardpage with mentor logic)
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hod_web_dashboard/applogin_page.dart';
@@ -136,27 +135,106 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
                   final shouldLogout = await showDialog<bool>(
                     context: context,
                     builder:
-                        (context) => AlertDialog(
-                          title: const Text('Confirm Logout'),
-                          content: const Text(
-                            'Are you sure you want to logout?',
+                        (context) => Dialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text('Cancel'),
+                          elevation: 10,
+                          backgroundColor: Colors.white,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minWidth: 300,
+                              maxWidth: 400, // good for web dialogs
                             ),
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 32,
                               ),
-                              child: const Text(
-                                'Yes',
-                                style: TextStyle(color: Colors.white),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text(
+                                    "Confirm Logout? 😣",
+                                    style: TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    "Are you sure you want to logout?",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.normal,
+                                      color: Colors.grey,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 32),
+                                  FractionallySizedBox(
+                                    widthFactor: 1,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF0746C5,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        elevation: 2,
+                                      ),
+                                      onPressed:
+                                          () => Navigator.pop(context, true),
+                                      child: const Text(
+                                        "Confirm Logout",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                          fontSize: 17,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  FractionallySizedBox(
+                                    widthFactor: 1,
+                                    child: OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 16,
+                                        ),
+                                        side: const BorderSide(
+                                          color: Colors.grey,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      onPressed:
+                                          () => Navigator.pop(context, false),
+                                      child: const Text(
+                                        "No",
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                   );
 
@@ -188,7 +266,7 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
 
   Widget _buildTopBar() {
     return Container(
-      color: Colors.blue[800],
+      color: Color(0xFF0746C5),
       padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -351,6 +429,7 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
                 )
                 : AttendanceForm(
                   branchName: selectedBranch!,
+                  endYear: selectedYear!, // ✅ Make sure this is passed
                   cachedData: cachedStudentData[selectedBranch!],
                   onCacheUpdate: (data) {
                     setState(() {
