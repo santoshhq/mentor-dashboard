@@ -147,243 +147,1003 @@ class _MentorsPageState extends State<MentorsPage> {
           /// Left: Add Mentor Card
           Expanded(
             flex: 2,
-            child: Card(
-              elevation: 6,
-              shape: RoundedRectangleBorder(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Add Mentor",
-                        style: theme.textTheme.titleLarge!.copyWith(
-                          fontWeight: FontWeight.bold,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// Header
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.person_add_alt_1,
+                          size: 26,
+                          color: Colors.indigo,
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      TextField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: "Mentor Name",
-                          border: OutlineInputBorder(),
+                        const SizedBox(width: 10),
+                        Text(
+                          "Add Mentor",
+                          style: theme.textTheme.titleLarge!.copyWith(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 22,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _userIdController,
-                        decoration: const InputDecoration(
-                          labelText: "User ID (email/ID)",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: "Password",
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value: selectedBatch,
-                        hint: const Text("Select Batch"),
-                        decoration: const InputDecoration(
-                          border: OutlineInputBorder(),
-                        ),
-                        items:
-                            availableBatches.map((batch) {
-                              return DropdownMenuItem(
-                                value: batch,
-                                child: Text(batch),
-                              );
-                            }).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            selectedBatch = val;
-                            fetchSectionsForBatch(val!);
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<String>(
-                        value:
-                            availableSections.contains(selectedSection)
-                                ? selectedSection
-                                : null,
-                        hint: const Text("Select Section"),
-                        decoration: const InputDecoration(
-                          labelText: "Section",
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.class_),
-                        ),
-                        isExpanded: true,
-                        items:
-                            availableSections.map((section) {
-                              return DropdownMenuItem(
-                                value: section,
-                                child: Text(section),
-                              );
-                            }).toList(),
-                        onChanged:
-                            availableSections.isEmpty
-                                ? null
-                                : (val) {
-                                  setState(() {
-                                    selectedSection = val;
-                                  });
-                                },
-                      ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
 
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
+                    /// Name
+                    TextField(
+                      controller: _nameController,
+                      decoration: InputDecoration(
+                        labelText: "Mentor Name",
+                        prefixIcon: const Icon(Icons.person),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    /// User ID
+                    TextField(
+                      controller: _userIdController,
+                      decoration: InputDecoration(
+                        labelText: "User ID (email/ID)",
+                        prefixIcon: const Icon(Icons.account_box_outlined),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    /// Password
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: "Password",
+                        prefixIcon: const Icon(Icons.lock_outline),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    /// Batch & Section Dropdowns in Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: selectedBatch,
+                            hint: const Text("Select Batch"),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.school),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items:
+                                availableBatches.map((batch) {
+                                  return DropdownMenuItem(
+                                    value: batch,
+                                    child: Text(batch),
+                                  );
+                                }).toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                selectedBatch = val;
+                                fetchSectionsForBatch(val!);
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value:
+                                availableSections.contains(selectedSection)
+                                    ? selectedSection
+                                    : null,
+                            hint: const Text("Select Section"),
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.class_),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            items:
+                                availableSections.map((section) {
+                                  return DropdownMenuItem(
+                                    value: section,
+                                    child: Text(section),
+                                  );
+                                }).toList(),
+                            onChanged:
+                                availableSections.isEmpty
+                                    ? null
+                                    : (val) {
+                                      setState(() {
+                                        selectedSection = val;
+                                      });
+                                    },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    /// Add Batch-Section Button
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: ElevatedButton.icon(
                         onPressed: addBatchSection,
                         icon: const Icon(Icons.add),
                         label: const Text("Add Batch-Section"),
-                      ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        children:
-                            selectedBatchSections.map((e) {
-                              return Chip(
-                                label: Text("${e['batch']} - ${e['section']}"),
-                                backgroundColor: Colors.blue[50],
-                                onDeleted: () {
-                                  setState(() {
-                                    selectedBatchSections.remove(e);
-                                  });
-                                },
-                              );
-                            }).toList(),
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _addMentor,
-                          icon: const Icon(Icons.save),
-                          label: const Text("Save Mentor"),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                        style: ElevatedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.indigo,
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 20,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    /// Chips Display
+                    if (selectedBatchSections.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Assigned Sections:",
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 4,
+                            children:
+                                selectedBatchSections.map((e) {
+                                  return Chip(
+                                    label: Text(
+                                      "${e['batch']} - ${e['section']}",
+                                    ),
+                                    backgroundColor: Colors.indigo.shade50,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    deleteIcon: const Icon(Icons.close),
+                                    onDeleted: () {
+                                      setState(() {
+                                        selectedBatchSections.remove(e);
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                          ),
+                        ],
+                      ),
+
+                    const SizedBox(height: 30),
+
+                    /// Save Button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _addMentor,
+                        icon: const Icon(Icons.save_rounded, size: 20),
+                        label: const Text(
+                          "Save Mentor",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade600,
+                          foregroundColor: Colors.white,
+                          elevation: 3,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+
           const SizedBox(width: 20),
 
           /// Right: Mentors List
+          /// Right: Mentors List
+          ///
+          ///
           Expanded(
             flex: 3,
-            child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance.collection('mentors').snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                final mentors = snapshot.data!.docs;
-                if (mentors.isEmpty) {
-                  return const Center(child: Text("No mentors added yet."));
-                }
-                return ListView.separated(
-                  itemCount: mentors.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final data = mentors[index].data() as Map<String, dynamic>;
-                    final List assigned = data['assigned'] ?? [];
-                    return Card(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// Title
+                  Row(
+                    children: const [
+                      Icon(Icons.group, color: Colors.indigo),
+                      SizedBox(width: 8),
+                      Text(
+                        "Assigned Mentors",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      elevation: 4,
-                      child: ListTile(
-                        title: Text(
-                          data['name'] ?? 'No Name',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            [
-                              "User ID: ${data['userId'] ?? ''}",
-                              if (assigned.isNotEmpty)
-                                "Assigned: ${assigned.map((e) => "${e['batch']} - ${e['section']}").join(', ')}",
-                            ].join('\n'),
-                          ),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () async {
-                            final confirm = await showDialog<bool>(
-                              context: context,
-                              builder:
-                                  (_) => AlertDialog(
-                                    title: const Text("Confirm Delete"),
-                                    content: const Text(
-                                      "Are you sure you want to delete this mentor?",
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    flex: 3,
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream:
+                          FirebaseFirestore.instance
+                              .collection('mentors')
+                              .snapshots(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        final mentors = snapshot.data!.docs;
+                        if (mentors.isEmpty) {
+                          return const Center(
+                            child: Text("No mentors added yet."),
+                          );
+                        }
+                        return ListView.separated(
+                          itemCount: mentors.length,
+                          separatorBuilder:
+                              (_, __) => const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final data =
+                                mentors[index].data() as Map<String, dynamic>;
+                            final List assigned = data['assigned'] ?? [];
+                            return Card(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 4,
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.indigo,
+                                  child: Text(
+                                    (data['name'] != null &&
+                                            data['name'].isNotEmpty)
+                                        ? data['name'][0].toUpperCase()
+                                        : '?',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed:
-                                            () => Navigator.pop(context, false),
-                                        child: const Text("Cancel"),
-                                      ),
-                                      ElevatedButton(
-                                        onPressed:
-                                            () => Navigator.pop(context, true),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Colors.red,
-                                        ),
-                                        child: const Text(
-                                          "Delete",
-                                          style: TextStyle(color: Colors.white),
-                                        ),
-                                      ),
-                                    ],
                                   ),
+                                ),
+                                title: Text(
+                                  data['name'] ?? 'No Name',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                    [
+                                      "User ID: ${data['userId'] ?? ''}",
+                                      if (assigned.isNotEmpty)
+                                        "Assigned: ${assigned.map((e) => "${e['batch']} - ${e['section']}").join(', ')}",
+                                    ].join('\n'),
+                                  ),
+                                ),
+
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit,
+                                        color: Colors.black,
+                                      ),
+                                      tooltip: "Edit",
+                                      onPressed: () async {
+                                        final nameController =
+                                            TextEditingController(
+                                              text: data['name'] ?? '',
+                                            );
+                                        final userIdController =
+                                            TextEditingController(
+                                              text: data['userId'] ?? '',
+                                            );
+                                        final passwordController =
+                                            TextEditingController(
+                                              text: data['password'] ?? '',
+                                            );
+
+                                        try {
+                                          debugPrint(
+                                            "🪐 Opening edit dialog for mentor: ${data['name']}",
+                                          );
+
+                                          final List<Map<String, String>>
+                                          assignedList =
+                                              (data['assigned']
+                                                          as List<dynamic>? ??
+                                                      [])
+                                                  .map<Map<String, String>>((
+                                                    e,
+                                                  ) {
+                                                    final map =
+                                                        <String, String>{};
+                                                    (e as Map).forEach((
+                                                      key,
+                                                      value,
+                                                    ) {
+                                                      map[key.toString()] =
+                                                          value.toString();
+                                                    });
+                                                    return map;
+                                                  })
+                                                  .toList();
+
+                                          final result = await showDialog<bool>(
+                                            context: context,
+                                            builder: (context) {
+                                              // local availableSections inside dialog
+                                              List<String>
+                                              localAvailableSections = [];
+
+                                              Future<void>
+                                              fetchSectionsForBatchInDialog(
+                                                String batch,
+                                              ) async {
+                                                debugPrint(
+                                                  "🔍 [Edit] Fetching sections for batch: $batch",
+                                                );
+
+                                                try {
+                                                  final snapshot =
+                                                      await FirebaseFirestore
+                                                          .instance
+                                                          .collectionGroup(
+                                                            'students',
+                                                          )
+                                                          .get();
+
+                                                  final Set<String> sections =
+                                                      {};
+
+                                                  for (var doc
+                                                      in snapshot.docs) {
+                                                    final data = doc.data();
+                                                    if (data.containsKey(
+                                                          'endYear',
+                                                        ) &&
+                                                        data['endYear']
+                                                                .toString() ==
+                                                            batch) {
+                                                      final section =
+                                                          data['section']
+                                                              ?.toString()
+                                                              .toUpperCase();
+                                                      if (section != null &&
+                                                          section.isNotEmpty) {
+                                                        sections.add(section);
+                                                      }
+                                                    }
+                                                  }
+
+                                                  final sortedSections =
+                                                      sections.toList()..sort();
+
+                                                  localAvailableSections =
+                                                      sortedSections;
+                                                  debugPrint(
+                                                    "✅ [Edit] Sections for $batch: $localAvailableSections",
+                                                  );
+                                                } catch (e, stack) {
+                                                  debugPrint(
+                                                    "❌ Error fetching sections: $e",
+                                                  );
+                                                  debugPrint("$stack");
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        "Error fetching sections: $e",
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              }
+
+                                              return StatefulBuilder(
+                                                builder: (context, setState) {
+                                                  // Filter out already assigned sections for the selected batch
+                                                  final filteredSections =
+                                                      localAvailableSections.where((
+                                                        sec,
+                                                      ) {
+                                                        return !assignedList.any(
+                                                          (e) =>
+                                                              e['batch'] ==
+                                                                  selectedBatch &&
+                                                              e['section'] ==
+                                                                  sec,
+                                                        );
+                                                      }).toList();
+
+                                                  return Dialog(
+                                                    shape: RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            16,
+                                                          ),
+                                                    ),
+                                                    child: ConstrainedBox(
+                                                      constraints:
+                                                          const BoxConstraints(
+                                                            maxWidth: 600,
+                                                            maxHeight: 600,
+                                                          ),
+                                                      child: Padding(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              20,
+                                                            ),
+                                                        child: SingleChildScrollView(
+                                                          child: Column(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              Row(
+                                                                children: const [
+                                                                  Icon(
+                                                                    Icons.edit,
+                                                                    color:
+                                                                        Colors
+                                                                            .blue,
+                                                                  ),
+                                                                  SizedBox(
+                                                                    width: 10,
+                                                                  ),
+                                                                  Text(
+                                                                    "Edit Mentor Details",
+                                                                    style: TextStyle(
+                                                                      fontSize:
+                                                                          18,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 20,
+                                                              ),
+                                                              TextField(
+                                                                controller:
+                                                                    nameController,
+                                                                decoration: const InputDecoration(
+                                                                  labelText:
+                                                                      "Name",
+                                                                  prefixIcon: Icon(
+                                                                    Icons
+                                                                        .person,
+                                                                  ),
+                                                                  border:
+                                                                      OutlineInputBorder(),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 10,
+                                                              ),
+                                                              TextField(
+                                                                controller:
+                                                                    userIdController,
+                                                                decoration: const InputDecoration(
+                                                                  labelText:
+                                                                      "User ID",
+                                                                  prefixIcon: Icon(
+                                                                    Icons.badge,
+                                                                  ),
+                                                                  border:
+                                                                      OutlineInputBorder(),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 10,
+                                                              ),
+                                                              TextField(
+                                                                controller:
+                                                                    passwordController,
+                                                                obscureText:
+                                                                    true,
+                                                                decoration: const InputDecoration(
+                                                                  labelText:
+                                                                      "Password",
+                                                                  prefixIcon:
+                                                                      Icon(
+                                                                        Icons
+                                                                            .lock,
+                                                                      ),
+                                                                  border:
+                                                                      OutlineInputBorder(),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 20,
+                                                              ),
+                                                              const Align(
+                                                                alignment:
+                                                                    Alignment
+                                                                        .centerLeft,
+                                                                child: Text(
+                                                                  "Assigned Batch-Sections:",
+                                                                  style: TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 8,
+                                                              ),
+                                                              Column(
+                                                                children:
+                                                                    assignedList.asMap().entries.map((
+                                                                      entry,
+                                                                    ) {
+                                                                      final idx =
+                                                                          entry
+                                                                              .key;
+                                                                      final item =
+                                                                          entry
+                                                                              .value;
+                                                                      final batch =
+                                                                          item['batch'];
+                                                                      final section =
+                                                                          item['section'];
+
+                                                                      return ListTile(
+                                                                        contentPadding:
+                                                                            EdgeInsets.zero,
+                                                                        title: Text(
+                                                                          "$batch - $section",
+                                                                        ),
+                                                                        trailing: IconButton(
+                                                                          icon: const Icon(
+                                                                            Icons.delete,
+                                                                            color:
+                                                                                Colors.red,
+                                                                          ),
+                                                                          onPressed: () {
+                                                                            setState(() {
+                                                                              assignedList.removeAt(
+                                                                                idx,
+                                                                              );
+                                                                            });
+                                                                          },
+                                                                        ),
+                                                                      );
+                                                                    }).toList(),
+                                                              ),
+                                                              const Divider(
+                                                                height: 30,
+                                                              ),
+                                                              const Align(
+                                                                alignment:
+                                                                    Alignment
+                                                                        .centerLeft,
+                                                                child: Text(
+                                                                  "Add New Batch-Section",
+                                                                  style: TextStyle(
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w500,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 8,
+                                                              ),
+                                                              Row(
+                                                                children: [
+                                                                  Expanded(
+                                                                    child: DropdownButtonFormField<
+                                                                      String
+                                                                    >(
+                                                                      value:
+                                                                          selectedBatch,
+                                                                      hint: const Text(
+                                                                        "Select Batch",
+                                                                      ),
+                                                                      items:
+                                                                          availableBatches.map((
+                                                                            batch,
+                                                                          ) {
+                                                                            return DropdownMenuItem(
+                                                                              value:
+                                                                                  batch,
+                                                                              child: Text(
+                                                                                batch,
+                                                                              ),
+                                                                            );
+                                                                          }).toList(),
+                                                                      onChanged: (
+                                                                        val,
+                                                                      ) async {
+                                                                        selectedBatch =
+                                                                            val;
+                                                                        selectedSection =
+                                                                            null;
+                                                                        await fetchSectionsForBatchInDialog(
+                                                                          val!,
+                                                                        );
+                                                                        setState(
+                                                                          () {},
+                                                                        );
+                                                                      },
+                                                                      decoration: const InputDecoration(
+                                                                        border:
+                                                                            OutlineInputBorder(),
+                                                                        prefixIcon: Icon(
+                                                                          Icons
+                                                                              .calendar_today,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    width: 8,
+                                                                  ),
+                                                                  Expanded(
+                                                                    child: DropdownButtonFormField<
+                                                                      String
+                                                                    >(
+                                                                      value:
+                                                                          selectedSection,
+                                                                      hint: const Text(
+                                                                        "Select Section",
+                                                                      ),
+                                                                      items:
+                                                                          filteredSections.map((
+                                                                            section,
+                                                                          ) {
+                                                                            return DropdownMenuItem(
+                                                                              value:
+                                                                                  section,
+                                                                              child: Text(
+                                                                                section,
+                                                                              ),
+                                                                            );
+                                                                          }).toList(),
+                                                                      onChanged: (
+                                                                        val,
+                                                                      ) {
+                                                                        setState(
+                                                                          () =>
+                                                                              selectedSection =
+                                                                                  val,
+                                                                        );
+                                                                      },
+                                                                      decoration: const InputDecoration(
+                                                                        border:
+                                                                            OutlineInputBorder(),
+                                                                        prefixIcon: Icon(
+                                                                          Icons
+                                                                              .class_,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 10,
+                                                              ),
+                                                              Align(
+                                                                alignment:
+                                                                    Alignment
+                                                                        .centerRight,
+                                                                child: ElevatedButton.icon(
+                                                                  onPressed:
+                                                                      (selectedBatch !=
+                                                                                  null &&
+                                                                              selectedSection !=
+                                                                                  null &&
+                                                                              !assignedList.any(
+                                                                                (
+                                                                                  e,
+                                                                                ) =>
+                                                                                    e['batch'] ==
+                                                                                        selectedBatch &&
+                                                                                    e['section'] ==
+                                                                                        selectedSection,
+                                                                              ))
+                                                                          ? () {
+                                                                            assignedList.add({
+                                                                              'batch':
+                                                                                  selectedBatch!,
+                                                                              'section':
+                                                                                  selectedSection!,
+                                                                            });
+                                                                            selectedBatch =
+                                                                                null;
+                                                                            selectedSection =
+                                                                                null;
+                                                                            localAvailableSections =
+                                                                                [];
+                                                                            setState(
+                                                                              () {},
+                                                                            );
+                                                                          }
+                                                                          : null,
+                                                                  icon:
+                                                                      const Icon(
+                                                                        Icons
+                                                                            .add,
+                                                                      ),
+                                                                  label: const Text(
+                                                                    "Add Section",
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(
+                                                                height: 20,
+                                                              ),
+                                                              Row(
+                                                                mainAxisAlignment:
+                                                                    MainAxisAlignment
+                                                                        .end,
+                                                                children: [
+                                                                  TextButton(
+                                                                    onPressed:
+                                                                        () => Navigator.pop(
+                                                                          context,
+                                                                          false,
+                                                                        ),
+                                                                    child: const Text(
+                                                                      "Cancel",
+                                                                    ),
+                                                                  ),
+                                                                  const SizedBox(
+                                                                    width: 10,
+                                                                  ),
+                                                                  ElevatedButton(
+                                                                    onPressed:
+                                                                        assignedList.isEmpty
+                                                                            ? null
+                                                                            : () => Navigator.pop(
+                                                                              context,
+                                                                              true,
+                                                                            ),
+                                                                    child: const Text(
+                                                                      "Save Changes",
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              );
+                                            },
+                                          );
+
+                                          if (result == true) {
+                                            try {
+                                              debugPrint(
+                                                "💾 Saving updated mentor data to Firestore...",
+                                              );
+
+                                              await FirebaseFirestore.instance
+                                                  .collection('mentors')
+                                                  .doc(mentors[index].id)
+                                                  .update({
+                                                    'name':
+                                                        nameController.text
+                                                            .trim(),
+                                                    'userId':
+                                                        userIdController.text
+                                                            .trim(),
+                                                    'password':
+                                                        passwordController.text
+                                                            .trim(),
+                                                    'assigned': assignedList,
+                                                  });
+
+                                              debugPrint(
+                                                "✅ Mentor updated successfully in Firestore.",
+                                              );
+
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    "Mentor updated successfully",
+                                                  ),
+                                                ),
+                                              );
+                                            } catch (e, stack) {
+                                              debugPrint(
+                                                "❌ Error updating mentor in Firestore: $e",
+                                              );
+                                              debugPrint("$stack");
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    "Failed to update mentor: $e",
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          } else {
+                                            debugPrint(
+                                              "🛑 Edit dialog cancelled, no update performed.",
+                                            );
+                                          }
+                                        } catch (e, stack) {
+                                          debugPrint(
+                                            "❌ Error while opening or processing edit dialog: $e",
+                                          );
+                                          debugPrint("$stack");
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text("Error: $e"),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    ),
+
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
+                                      tooltip: "Delete",
+                                      onPressed: () async {
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder:
+                                              (_) => AlertDialog(
+                                                title: const Text(
+                                                  "Confirm Delete",
+                                                ),
+                                                content: const Text(
+                                                  "Are you sure you want to delete this mentor?",
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          context,
+                                                          false,
+                                                        ),
+                                                    child: const Text("Cancel"),
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed:
+                                                        () => Navigator.pop(
+                                                          context,
+                                                          true,
+                                                        ),
+                                                    style:
+                                                        ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                        ),
+                                                    child: const Text(
+                                                      "Delete",
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                        );
+
+                                        if (confirm == true) {
+                                          try {
+                                            await FirebaseFirestore.instance
+                                                .collection('mentors')
+                                                .doc(mentors[index].id)
+                                                .delete();
+
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text("Mentor deleted"),
+                                              ),
+                                            );
+                                          } catch (e) {
+                                            debugPrint(
+                                              "❌ Error deleting mentor: $e",
+                                            );
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  "Failed to delete mentor: $e",
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
                             );
-
-                            if (confirm == true) {
-                              try {
-                                await FirebaseFirestore.instance
-                                    .collection('mentors')
-                                    .doc(mentors[index].id)
-                                    .delete();
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Mentor deleted"),
-                                  ),
-                                );
-                              } catch (e) {
-                                debugPrint("❌ Error deleting mentor: $e");
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Failed to delete mentor: $e",
-                                    ),
-                                  ),
-                                );
-                              }
-                            }
                           },
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

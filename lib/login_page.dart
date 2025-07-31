@@ -122,7 +122,7 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           Container(
-            color: Colors.blue[800],
+            color: Color(0xFF0746C5),
             height: 30,
             child: Marquee(
               text: 'Welcome to MLR Institute Of Technology    ',
@@ -183,8 +183,8 @@ class _LoginPageState extends State<LoginPage> {
                               },
                               borderRadius: BorderRadius.circular(8),
                               selectedColor: Colors.white,
-                              fillColor: Colors.blue,
-                              color: Colors.blue,
+                              fillColor: Color(0xFF0746C5),
+                              color: Color(0xFF0746C5),
                               constraints: const BoxConstraints(
                                 minHeight: 40,
                                 minWidth: 120,
@@ -198,7 +198,7 @@ class _LoginPageState extends State<LoginPage> {
                             TextField(
                               controller: _usernameController,
                               decoration: InputDecoration(
-                                hintText: 'Email',
+                                hintText: isHodLogin ? 'Email' : 'User ID',
                                 prefixIcon: const Icon(Icons.person),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(8),
@@ -206,6 +206,7 @@ class _LoginPageState extends State<LoginPage> {
                                 errorText: _usernameError,
                               ),
                             ),
+
                             const SizedBox(height: 15),
                             TextField(
                               controller: _passwordController,
@@ -269,7 +270,7 @@ class _LoginPageState extends State<LoginPage> {
                                           }
                                         },
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
+                                  backgroundColor: Color(0xFF0746C5),
                                   foregroundColor: Colors.white,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
@@ -295,10 +296,14 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 5),
           const Text(
             "2025 © MLR Institute Of Technology - All Rights Reserved",
-            style: TextStyle(fontSize: 12, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontWeight: FontWeight.w900,
+            ),
           ),
           const SizedBox(height: 10),
         ],

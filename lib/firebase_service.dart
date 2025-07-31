@@ -17,7 +17,6 @@ class FirebaseService {
       _cacheDate.month == DateTime.now().month &&
       _cacheDate.day == DateTime.now().day;
 
-  /// Fetches section-wise attendance summary for department & year
   Future<List<List<dynamic>>> fetchYearAttendanceData(String endYear) async {
     if (_isCacheValid && _yearDataCache.containsKey(endYear)) {
       print("✅ Returning cached year data for $endYear");
@@ -27,6 +26,7 @@ class FirebaseService {
     try {
       final snapshot = await _firestore.collectionGroup('students').get();
 
+      final todayDocId = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final Map<String, List<Map<String, dynamic>>> sectionGroups = {};
 
       for (var doc in snapshot.docs) {
@@ -36,35 +36,53 @@ class FirebaseService {
         final department = data['department'] ?? 'CSE';
         final section = data['section'] ?? 'Unknown';
         final branch = "$department-${section.toUpperCase()}";
+        final rollNo = data['rollNo'];
 
-        sectionGroups.putIfAbsent(branch, () => []).add(data);
+        sectionGroups.putIfAbsent(branch, () => []).add({
+          'rollNo': rollNo,
+          'department': department,
+          'section': section,
+        });
       }
 
       final List<List<dynamic>> result = [];
 
-      sectionGroups.forEach((branch, students) {
+      for (var entry in sectionGroups.entries) {
+        final branch = entry.key;
+        final students = entry.value;
         int total = students.length;
-        int attended =
-            students.where((s) {
-              if (s.containsKey('inTime')) {
-                Timestamp t = s['inTime'];
-                DateTime d = t.toDate();
-                DateTime now = DateTime.now();
-                return d.year == now.year &&
-                    d.month == now.month &&
-                    d.day == now.day;
-              }
-              return false;
-            }).length;
-        double percent = total == 0 ? 0 : (attended / total) * 100;
+        int attended = 0;
+
+        for (var student in students) {
+          final docRef = _firestore
+              .collection('Branch')
+              .doc(student['department'])
+              .collection(endYear)
+              .doc(student['section'])
+              .collection('students')
+              .doc(student['rollNo'])
+              .collection('attendance')
+              .doc(todayDocId);
+
+          final attDoc = await docRef.get();
+
+          if (attDoc.exists) {
+            final attData = attDoc.data();
+            if (attData != null && attData['status'] == 'present') {
+              attended++;
+            }
+          }
+        }
+
+        final percent = total == 0 ? 0 : (attended / total) * 100;
         result.add([branch, total, attended, "${percent.toStringAsFixed(1)}%"]);
-      });
+      }
 
       result.sort((a, b) => a[0].toString().compareTo(b[0].toString()));
       _yearDataCache[endYear] = result;
       _cacheDate = DateTime.now();
 
-      print("✅ Data for $endYear: $result");
+      print("✅ Final Data for $endYear: $result");
       return result;
     } catch (e) {
       print("❌ Error fetching year data for $endYear: $e");
@@ -201,4 +219,16 @@ class FirebaseService {
         now.month == date.month &&
         now.day == date.day;
   }
+}
+
+Future<void> updateAppLogin({
+  required String docId,
+  required String username,
+  required String password,
+}) async {
+  await FirebaseFirestore.instance.collection('app_logins').doc(docId).update({
+    'username': username.trim(),
+    'password': password.trim(),
+    'updatedAt': DateTime.now(),
+  });
 }
