@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AttendanceForm extends StatefulWidget {
   final String branchName;
@@ -28,9 +29,7 @@ class _AttendanceFormState extends State<AttendanceForm> {
       _studentsFuture = Future.value(widget.cachedData);
     } else {
       _studentsFuture = fetchStudentsForToday(widget.branchName).then((data) {
-        if (widget.onCacheUpdate != null) {
-          widget.onCacheUpdate!(data);
-        }
+        widget.onCacheUpdate?.call(data);
         return data;
       });
     }
@@ -43,11 +42,10 @@ class _AttendanceFormState extends State<AttendanceForm> {
     final now = DateTime.now();
     final today = DateFormat('yyyy-MM-dd').format(now);
 
-    // Extract batch and section from branchName (e.g., CSE-A => batch/year is dynamic in this structure)
     final parts = branchName.split('-');
     final department = parts[0];
     final section = parts.length > 1 ? parts[1] : '';
-    final batch = DateTime.now().year.toString(); // or derive from mentor data
+    final batch = DateTime.now().year.toString();
 
     final path = 'Branch/$department/$batch/$section/students';
     final studentsSnapshot = await firestore.collection(path).get();
@@ -67,11 +65,11 @@ class _AttendanceFormState extends State<AttendanceForm> {
 
       if (attendanceSnapshot.exists) {
         final attendanceData = attendanceSnapshot.data();
-        if (attendanceData != null && attendanceData['inTime'] != null) {
-          inTime = (attendanceData['inTime'] as Timestamp).toDate();
+        if (attendanceData?['inTime'] != null) {
+          inTime = (attendanceData!['inTime'] as Timestamp).toDate();
         }
-        if (attendanceData != null && attendanceData['outTime'] != null) {
-          outTime = (attendanceData['outTime'] as Timestamp).toDate();
+        if (attendanceData?['outTime'] != null) {
+          outTime = (attendanceData!['outTime'] as Timestamp).toDate();
         }
       }
 
@@ -103,26 +101,80 @@ class _AttendanceFormState extends State<AttendanceForm> {
         return 3;
       }
 
-      return getStatus(a).compareTo(getStatus(b));
+      return getStatus(b).compareTo(getStatus(a));
     });
 
     return students;
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Color _getBorderColor(Map<String, dynamic> s) {
+    if (!s['scannedToday']) return Colors.red;
+    if (s['partialScan']) return Colors.orange;
+    if (s['hours'] < 5) return Colors.purple;
+    return Colors.green;
+  }
+
+  String _getStatusLabel(Map<String, dynamic> s) {
+    if (!s['scannedToday']) return "Absent";
+    if (s['partialScan']) return "Partial";
+    if (s['hours'] < 5) return "Short Hours";
+    return "Present";
+  }
+
+  IconData _getStatusIcon(Map<String, dynamic> s) {
+    if (!s['scannedToday']) return Icons.cancel;
+    if (s['partialScan']) return Icons.warning_amber_rounded;
+    if (s['hours'] < 5) return Icons.timer_off;
+    return Icons.check_circle;
+  }
+
+  Color _getStatusColor(Map<String, dynamic> s) {
+    if (!s['scannedToday']) return Colors.red;
+    if (s['partialScan']) return Colors.orange;
+    if (s['hours'] < 5) return Colors.purple;
+    return Colors.green;
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Attendance Sheet - ${widget.branchName}",
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        // Header
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0746C5), Color(0xFF052F80)],
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.assignment, color: Colors.white, size: 26),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "Attendance - ${widget.branchName}",
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              Text(
+                DateFormat('dd MMM yyyy').format(DateTime.now()),
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.white70),
+              ),
+            ],
+          ),
         ),
-        const Divider(),
+        const SizedBox(height: 12),
+
+        // Attendance List
         Expanded(
           child: FutureBuilder<List<Map<String, dynamic>>>(
             future: _studentsFuture,
@@ -134,7 +186,6 @@ class _AttendanceFormState extends State<AttendanceForm> {
                 return Center(child: Text("Error loading students"));
               }
               final students = snapshot.data ?? [];
-
               if (students.isEmpty) {
                 return const Center(
                   child: Text("No data to display (Holiday or no scans)."),
@@ -142,40 +193,77 @@ class _AttendanceFormState extends State<AttendanceForm> {
               }
 
               return ListView.builder(
+                padding: const EdgeInsets.only(top: 4),
                 itemCount: students.length,
                 itemBuilder: (context, index) {
                   final s = students[index];
-                  final redHighlight =
-                      !s['scannedToday'] ||
-                      s['partialScan'] ||
-                      (s['hours'] < 5 && s['hours'] > 0);
-
-                  return Container(
+                  return Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: _getBorderColor(s), width: 1.5),
+                    ),
                     margin: const EdgeInsets.symmetric(
                       vertical: 4,
-                      horizontal: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: redHighlight ? Colors.red : Colors.grey.shade300,
-                        width: redHighlight ? 2 : 1,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
+                      horizontal: 8,
                     ),
                     child: ListTile(
-                      title: Text(s['name']),
-                      subtitle: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      contentPadding: const EdgeInsets.all(12),
+                      leading: CircleAvatar(
+                        backgroundColor: _getStatusColor(s).withOpacity(0.15),
+                        child: Icon(
+                          _getStatusIcon(s),
+                          color: _getStatusColor(s),
+                        ),
+                      ),
+                      title: Text(
+                        "${s['rollNo']} - ${s['name']}",
+                        style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Roll No: ${s['rollNo']}"),
-                          Text(
-                            "IN: ${s['inTime'] != null ? DateFormat('hh:mm a').format(s['inTime']) : '--'}",
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.login, size: 14, color: Colors.green),
+                              const SizedBox(width: 4),
+                              Text(
+                                s['inTime'] != null
+                                    ? DateFormat('hh:mm a').format(s['inTime'])
+                                    : '--',
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                              const SizedBox(width: 12),
+                              Icon(Icons.logout, size: 14, color: Colors.red),
+                              const SizedBox(width: 4),
+                              Text(
+                                s['outTime'] != null
+                                    ? DateFormat('hh:mm a').format(s['outTime'])
+                                    : '--',
+                                style: GoogleFonts.poppins(fontSize: 12),
+                              ),
+                              const Spacer(),
+                              Text(
+                                "${s['hours']}h",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12,
+                                  color: Colors.blueGrey,
+                                ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            "OUT: ${s['outTime'] != null ? DateFormat('hh:mm a').format(s['outTime']) : '--'}",
-                          ),
-                          Text("Hours: ${s['hours']}h"),
                         ],
+                      ),
+                      trailing: Chip(
+                        label: Text(
+                          _getStatusLabel(s),
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                        backgroundColor: _getStatusColor(s),
                       ),
                     ),
                   );

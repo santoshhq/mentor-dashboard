@@ -21,7 +21,7 @@ class _MentorsPageState extends State<MentorsPage> {
   String? selectedBatch;
   String? selectedSection;
   List<Map<String, String>> selectedBatchSections = [];
-
+  bool _obscurePassword = true;
   @override
   void initState() {
     super.initState();
@@ -132,9 +132,19 @@ class _MentorsPageState extends State<MentorsPage> {
     _passwordController.clear();
     selectedBatchSections.clear();
     setState(() {});
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Mentor added successfully')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: const [
+            Icon(Icons.person, color: Colors.white),
+            SizedBox(width: 8),
+            Text('Mentor added successfully'),
+          ],
+        ),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -211,17 +221,30 @@ class _MentorsPageState extends State<MentorsPage> {
                     const SizedBox(height: 16),
 
                     /// Password
+                    // bool _obscurePassword = true;
                     TextField(
                       controller: _passwordController,
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       decoration: InputDecoration(
                         labelText: "Password",
-                        prefixIcon: const Icon(Icons.lock_outline),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        prefixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
                       ),
                     ),
+
                     const SizedBox(height: 24),
 
                     /// Batch & Section Dropdowns in Row
@@ -487,7 +510,7 @@ class _MentorsPageState extends State<MentorsPage> {
                                     IconButton(
                                       icon: const Icon(
                                         Icons.edit,
-                                        color: Colors.black,
+                                        color: Colors.grey,
                                       ),
                                       tooltip: "Edit",
                                       onPressed: () async {
@@ -705,19 +728,30 @@ class _MentorsPageState extends State<MentorsPage> {
                                                                 controller:
                                                                     passwordController,
                                                                 obscureText:
-                                                                    true,
-                                                                decoration: const InputDecoration(
+                                                                    _obscurePassword,
+                                                                decoration: InputDecoration(
                                                                   labelText:
                                                                       "Password",
-                                                                  prefixIcon:
-                                                                      Icon(
-                                                                        Icons
-                                                                            .lock,
-                                                                      ),
+                                                                  prefixIcon: IconButton(
+                                                                    icon: Icon(
+                                                                      _obscurePassword
+                                                                          ? Icons
+                                                                              .visibility_off
+                                                                          : Icons
+                                                                              .visibility,
+                                                                    ),
+                                                                    onPressed: () {
+                                                                      setState(() {
+                                                                        _obscurePassword =
+                                                                            !_obscurePassword;
+                                                                      });
+                                                                    },
+                                                                  ),
                                                                   border:
-                                                                      OutlineInputBorder(),
+                                                                      const OutlineInputBorder(),
                                                                 ),
                                                               ),
+
                                                               const SizedBox(
                                                                 height: 20,
                                                               ),
@@ -966,6 +1000,32 @@ class _MentorsPageState extends State<MentorsPage> {
                                                                               context,
                                                                               true,
                                                                             ),
+                                                                    style: ElevatedButton.styleFrom(
+                                                                      backgroundColor:
+                                                                          Colors
+                                                                              .green, // Green button
+                                                                      foregroundColor:
+                                                                          Colors
+                                                                              .white, // White text
+                                                                      padding: const EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            24,
+                                                                        vertical:
+                                                                            12,
+                                                                      ),
+                                                                      textStyle: const TextStyle(
+                                                                        fontSize:
+                                                                            16,
+                                                                        fontWeight:
+                                                                            FontWeight.bold,
+                                                                      ),
+                                                                      shape: RoundedRectangleBorder(
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(
+                                                                              12,
+                                                                            ),
+                                                                      ),
+                                                                    ),
                                                                     child: const Text(
                                                                       "Save Changes",
                                                                     ),
@@ -989,34 +1049,109 @@ class _MentorsPageState extends State<MentorsPage> {
                                                 "💾 Saving updated mentor data to Firestore...",
                                               );
 
-                                              await FirebaseFirestore.instance
-                                                  .collection('mentors')
-                                                  .doc(mentors[index].id)
-                                                  .update({
-                                                    'name':
-                                                        nameController.text
-                                                            .trim(),
-                                                    'userId':
-                                                        userIdController.text
-                                                            .trim(),
-                                                    'password':
-                                                        passwordController.text
-                                                            .trim(),
-                                                    'assigned': assignedList,
-                                                  });
+                                              final mentorRef =
+                                                  FirebaseFirestore.instance
+                                                      .collection('mentors')
+                                                      .doc(mentors[index].id);
+
+                                              try {
+                                                // 1️⃣ Get the old assigned list
+                                                final oldDoc =
+                                                    await mentorRef.get();
+                                                final oldAssigned =
+                                                    (oldDoc.data()?['assigned']
+                                                        as List<dynamic>?) ??
+                                                    [];
+
+                                                // 2️⃣ Build keys like "2027-A" to compare
+                                                final oldKeys =
+                                                    oldAssigned
+                                                        .map(
+                                                          (e) =>
+                                                              "${e['batch']}-${e['section']}",
+                                                        )
+                                                        .toSet();
+                                                final newKeys =
+                                                    assignedList
+                                                        .map(
+                                                          (e) =>
+                                                              "${e['batch']}-${e['section']}",
+                                                        )
+                                                        .toSet();
+
+                                                // 3️⃣ Find removed keys
+                                                final removedKeys = oldKeys
+                                                    .difference(newKeys);
+
+                                                // 4️⃣ Start a Firestore batch
+                                                final batch =
+                                                    FirebaseFirestore.instance
+                                                        .batch();
+
+                                                // 5️⃣ Update mentor's details + new assigned list
+                                                batch.update(mentorRef, {
+                                                  'name':
+                                                      nameController.text
+                                                          .trim(),
+                                                  'userId':
+                                                      userIdController.text
+                                                          .trim(),
+                                                  'password':
+                                                      passwordController.text
+                                                          .trim(),
+                                                  'assigned': assignedList,
+                                                });
+
+                                                // 6️⃣ Delete only removed assignedStudents docs
+                                                for (final key in removedKeys) {
+                                                  final docRef = mentorRef
+                                                      .collection(
+                                                        'assignedStudents',
+                                                      )
+                                                      .doc(key);
+                                                  batch.delete(docRef);
+                                                }
+
+                                                // 7️⃣ Commit the batch (atomic operation)
+                                                await batch.commit();
+
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.check_circle,
+                                                          color: Colors.white,
+                                                        ),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                          "Mentor updated successfully",
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    backgroundColor:
+                                                        Colors.green,
+                                                    duration: Duration(
+                                                      seconds: 2,
+                                                    ),
+                                                  ),
+                                                );
+                                              } catch (e) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      "Failed to update mentor: $e",
+                                                    ),
+                                                  ),
+                                                );
+                                              }
 
                                               debugPrint(
                                                 "✅ Mentor updated successfully in Firestore.",
-                                              );
-
-                                              ScaffoldMessenger.of(
-                                                context,
-                                              ).showSnackBar(
-                                                const SnackBar(
-                                                  content: Text(
-                                                    "Mentor updated successfully",
-                                                  ),
-                                                ),
                                               );
                                             } catch (e, stack) {
                                               debugPrint(
@@ -1103,29 +1238,70 @@ class _MentorsPageState extends State<MentorsPage> {
                                         );
 
                                         if (confirm == true) {
-                                          try {
-                                            await FirebaseFirestore.instance
-                                                .collection('mentors')
-                                                .doc(mentors[index].id)
-                                                .delete();
+                                          final messenger =
+                                              ScaffoldMessenger.of(context);
 
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
+                                          try {
+                                            final mentorRef = FirebaseFirestore
+                                                .instance
+                                                .collection('mentors')
+                                                .doc(mentors[index].id);
+
+                                            // 1️⃣ Get all assigned students for this mentor
+                                            final assignedStudentsSnap =
+                                                await mentorRef
+                                                    .collection(
+                                                      'assignedStudents',
+                                                    )
+                                                    .get();
+
+                                            // 2️⃣ Delete each assigned student doc
+                                            for (var doc
+                                                in assignedStudentsSnap.docs) {
+                                              await doc.reference.delete();
+                                            }
+
+                                            // 3️⃣ Delete the mentor doc itself
+                                            await mentorRef.delete();
+
+                                            messenger.showSnackBar(
                                               const SnackBar(
-                                                content: Text("Mentor deleted"),
+                                                backgroundColor: Colors.red,
+                                                content: Row(
+                                                  children: [
+                                                    Icon(
+                                                      Icons
+                                                          .delete_forever_outlined,
+                                                      color: Colors.white,
+                                                    ),
+                                                    SizedBox(width: 8),
+                                                    Text(
+                                                      "Mentor deleted successfully!",
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                duration: Duration(seconds: 2),
                                               ),
                                             );
                                           } catch (e) {
                                             debugPrint(
                                               "❌ Error deleting mentor: $e",
                                             );
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
+
+                                            messenger.showSnackBar(
                                               SnackBar(
+                                                backgroundColor: Colors.red,
                                                 content: Text(
                                                   "Failed to delete mentor: $e",
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                duration: const Duration(
+                                                  seconds: 2,
                                                 ),
                                               ),
                                             );

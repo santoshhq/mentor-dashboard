@@ -1,3 +1,4 @@
 {
-    "java.project.explorer.showNonJavaResources": false
+    "java.project.explorer.showNonJavaResources": false,
+    "dart.flutterSdkPath": "~/Downloads/flutter_windows_3.32.8-stable/flutter"
 }
