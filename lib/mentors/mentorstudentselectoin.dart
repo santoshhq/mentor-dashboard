@@ -1,11 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hod_web_dashboard/firebase_service.dart';
 
 class MentorStudentSelectorPage extends StatefulWidget {
   final String mentorUserId;
 
-  const MentorStudentSelectorPage({super.key, required this.mentorUserId});
+  /// Callback: (endYear, updatedData)
+  final void Function(String endYear, List<List<dynamic>> updatedData)?
+  onCacheUpdate;
+
+  /// NEW: Callback to pass frozen roll numbers (students that can't be deleted) to parent
+  final void Function(List<String> frozenRollNos)? onFrozenListChanged;
+
+  /// Callback to pass currently selected roll numbers to parent
+  final void Function(Set<String>)? onSelectedRollNosChanged;
+
+  const MentorStudentSelectorPage({
+    super.key,
+    required this.mentorUserId,
+    this.onCacheUpdate,
+    this.onFrozenListChanged,
+    this.onSelectedRollNosChanged,
+  });
 
   @override
   MentorStudentSelectorPageState createState() =>
@@ -21,17 +38,12 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
   List<Map<String, dynamic>> allStudents = [];
   List<Map<String, dynamic>> selectedStudents = [];
 
-  // Baseline from Firestore (saved previously) — used for change detection
   List<String> initialSelectedRollNos = [];
-
-  // Represents which students are currently "frozen" on left (un-tappable).
-  // Initially equals initialSelectedRollNos. If user removes a frozen student
-  // from the right list, we remove it from frozenRollNos (so it becomes selectable).
   List<String> frozenRollNos = [];
 
   bool isLoading = false;
   bool showApplyButton = false;
-  bool hasChanges = false; // true when user made add/remove compared to initial
+  bool hasChanges = false;
 
   @override
   void initState() {
@@ -39,41 +51,60 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
     fetchAssignedSections();
   }
 
-  /// Called from parent/global refresh button
   Future<void> refreshPage() async {
-    await fetchAssignedSections();
-    if (selectedBatch != null && selectedSection != null) {
-      await fetchStudents();
-    }
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("✅ Refreshed!")));
+    try {
+      await fetchAssignedSections();
+      if (selectedBatch != null && selectedSection != null) {
+        await fetchStudents();
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("✅ Refreshed!")));
+      }
+    } catch (e, stack) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Refresh failed: $e")));
+      }
+      print('refreshPage error: $e');
+      print(stack);
     }
   }
 
   Future<void> fetchAssignedSections() async {
-    final mentorDoc =
-        await FirebaseFirestore.instance
-            .collection('mentors')
-            .where('userId', isEqualTo: widget.mentorUserId)
-            .limit(1)
-            .get();
+    try {
+      final mentorDoc =
+          await FirebaseFirestore.instance
+              .collection('mentors')
+              .where('userId', isEqualTo: widget.mentorUserId)
+              .limit(1)
+              .get();
 
-    if (mentorDoc.docs.isNotEmpty) {
-      final data = mentorDoc.docs.first.data();
-      setState(() {
-        assignedSections =
-            (data['assigned'] as List)
-                .map<Map<String, String>>(
-                  (e) => {
-                    'batch': e['batch'],
-                    'section': e['section'],
-                    'department': e['department'] ?? 'CSE',
-                  },
-                )
-                .toList();
-      });
+      if (mentorDoc.docs.isNotEmpty) {
+        final data = mentorDoc.docs.first.data();
+        setState(() {
+          assignedSections =
+              (data['assigned'] as List)
+                  .map<Map<String, String>>(
+                    (e) => {
+                      'batch': e['batch'],
+                      'section': e['section'],
+                      'department': e['department'] ?? 'CSE',
+                    },
+                  )
+                  .toList();
+        });
+      }
+    } catch (e, stack) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error fetching sections: $e')));
+      }
+      print('fetchAssignedSections error: $e');
+      print(stack);
     }
   }
 
@@ -95,7 +126,6 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
 
     final docId = "$selectedBatch-$selectedSection";
 
-    // load persisted selection (baseline)
     final existingSelection =
         await FirebaseFirestore.instance
             .collection('mentors')
@@ -108,11 +138,12 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
       initialSelectedRollNos = List<String>.from(
         existingSelection.data()!['selectedRollNos'] ?? [],
       );
-      // frozen initially = baseline
       frozenRollNos = List<String>.from(initialSelectedRollNos);
+
+      /// 🔄 Notify parent with frozen list
+      widget.onFrozenListChanged?.call(frozenRollNos);
     }
 
-    // Load all students
     final snapshot =
         await FirebaseFirestore.instance
             .collection('Branch')
@@ -132,16 +163,18 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
             )
             .toList();
 
+    fetched.sort(
+      (a, b) => (a['rollNo'] as String).compareTo(b['rollNo'] as String),
+    );
+
     setState(() {
       allStudents = fetched;
-      // Selected students initially = those saved previously
       selectedStudents =
           fetched
               .where((s) => initialSelectedRollNos.contains(s['rollNo']))
               .toList();
       isLoading = false;
-      showApplyButton =
-          true; // show the Apply/Cancel row (Apply disabled until change)
+      showApplyButton = true;
       hasChanges = false;
     });
   }
@@ -162,13 +195,31 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
           'updatedAt': DateTime.now(),
         });
 
-    // After save, update baseline and re-freeze the saved ones
     setState(() {
       initialSelectedRollNos =
           selectedStudents.map((s) => s['rollNo'] as String).toList();
       frozenRollNos = List<String>.from(initialSelectedRollNos);
       hasChanges = false;
     });
+
+    /// 🔄 Notify parent with frozen list after save
+    widget.onFrozenListChanged?.call(frozenRollNos);
+
+    if (widget.onCacheUpdate != null && selectedBatch != null) {
+      try {
+        final updatedData = await FirebaseService.instance
+            .fetchYearAttendanceData(
+              selectedBatch!,
+              forceRefresh: true,
+              mentorUserId: widget.mentorUserId,
+            );
+        widget.onCacheUpdate!(selectedBatch!, updatedData);
+      } catch (e) {
+        debugPrint(
+          "Error updating dashboard cache after saveSelectedStudents: $e",
+        );
+      }
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -190,7 +241,6 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
   }
 
   void cancelSelectionChanges() {
-    // Reset to the initial starting state so user can choose batch/section again
     setState(() {
       selectedBatch = null;
       selectedSection = null;
@@ -202,12 +252,14 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
       showApplyButton = false;
       hasChanges = false;
     });
+
+    /// Notify parent when cleared
+    widget.onFrozenListChanged?.call([]);
   }
 
   void toggleStudentSelection(Map<String, dynamic> student) {
     final roll = student['rollNo'] as String;
 
-    // If currently frozen, do nothing (cannot toggle)
     if (frozenRollNos.contains(roll)) return;
 
     setState(() {
@@ -218,33 +270,37 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
         selectedStudents.add(student);
       }
 
-      // recompute hasChanges: compare selected rollNos with baseline initialSelectedRollNos
       final current =
           selectedStudents.map((s) => s['rollNo'] as String).toList();
       hasChanges = !_listEqualsIgnoreOrder(current, initialSelectedRollNos);
     });
+
+    // ✅ Notify parent about updated roll numbers
+    widget.onSelectedRollNosChanged?.call(
+      selectedStudents.map((s) => s['rollNo'] as String).toSet(),
+    );
   }
 
-  // When user removes from the right list (unselect)
   void removeFromSelected(Map<String, dynamic> student) {
     final roll = student['rollNo'] as String;
 
     setState(() {
-      // Remove from selected
       selectedStudents.removeWhere((s) => s['rollNo'] == roll);
 
-      // If this roll was initially frozen (baseline), we should unfreeze it so
-      // the left list becomes tappable for that student (user can re-add it).
       if (initialSelectedRollNos.contains(roll) &&
           frozenRollNos.contains(roll)) {
-        frozenRollNos.remove(roll); // unfreeze
+        frozenRollNos.remove(roll);
       }
 
-      // recompute hasChanges
       final current =
           selectedStudents.map((s) => s['rollNo'] as String).toList();
       hasChanges = !_listEqualsIgnoreOrder(current, initialSelectedRollNos);
     });
+
+    // ✅ Notify parent about updated roll numbers
+    widget.onSelectedRollNosChanged?.call(
+      selectedStudents.map((s) => s['rollNo'] as String).toSet(),
+    );
   }
 
   bool _listEqualsIgnoreOrder(List<String> a, List<String> b) {
@@ -274,8 +330,6 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
             ],
           ),
           const SizedBox(height: 20),
-
-          // Dropdowns + Show Students + Refresh (if desired)
           Row(
             children: [
               Expanded(
@@ -368,193 +422,25 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
               ),
             ],
           ),
-
           const SizedBox(height: 24),
-
           if (isLoading) const Center(child: CircularProgressIndicator()),
-
           if (!isLoading && allStudents.isNotEmpty)
             Expanded(
               child: Row(
                 children: [
-                  // Left: All Students (shows check / lock)
-                  Expanded(
-                    child: Container(
-                      height: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.white),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.school, size: 20),
-                              const SizedBox(width: 6),
-                              Text(
-                                "All Students (${allStudents.length})",
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const Divider(),
-                          Expanded(
-                            child: Scrollbar(
-                              thumbVisibility: true,
-                              child: ListView.builder(
-                                itemCount: allStudents.length,
-                                itemBuilder: (context, index) {
-                                  final student = allStudents[index];
-                                  final roll = student['rollNo'] as String;
-                                  final name = student['name'] as String;
-
-                                  final isSelected = selectedStudents.any(
-                                    (s) => s['rollNo'] == roll,
-                                  );
-                                  final isFrozen = frozenRollNos.contains(roll);
-
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 4,
-                                    ),
-                                    color:
-                                        isFrozen
-                                            ? const Color.fromARGB(
-                                              255,
-                                              21,
-                                              184,
-                                              3,
-                                            )
-                                            : null,
-                                    child: ListTile(
-                                      title: Text(
-                                        "$roll - $name",
-                                        style: TextStyle(
-                                          color: isFrozen ? Colors.white : null,
-                                        ),
-                                      ),
-                                      trailing:
-                                          isFrozen
-                                              ? const Icon(
-                                                Icons.lock,
-                                                color: Colors.white,
-                                              )
-                                              : Icon(
-                                                isSelected
-                                                    ? Icons.check_circle
-                                                    : Icons.circle_outlined,
-                                                color:
-                                                    isSelected
-                                                        ? Colors.green
-                                                        : null,
-                                              ),
-                                      onTap:
-                                          isFrozen
-                                              ? null
-                                              : () => toggleStudentSelection(
-                                                student,
-                                              ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
+                  Expanded(child: _buildStudentList(allStudents, true)),
                   const VerticalDivider(width: 16),
-
-                  // Right: Selected Students (removable)
-                  Expanded(
-                    child: Container(
-                      height: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.white),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.check_circle_outline, size: 20),
-                              const SizedBox(width: 6),
-                              Text(
-                                "Selected Students (${selectedStudents.length})",
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const Divider(),
-                          Expanded(
-                            child: Scrollbar(
-                              thumbVisibility: true,
-                              child: ListView.builder(
-                                itemCount: selectedStudents.length,
-                                itemBuilder: (context, index) {
-                                  // Sort here before building
-                                  final sortedStudents = [...selectedStudents]
-                                    ..sort(
-                                      (a, b) => (a['rollNo'] as String)
-                                          .compareTo(b['rollNo'] as String),
-                                    );
-
-                                  final student = sortedStudents[index];
-                                  final roll = student['rollNo'] as String;
-                                  final name = student['name'] as String;
-
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(
-                                      vertical: 4,
-                                    ),
-                                    child: ListTile(
-                                      title: Text("$roll - $name"),
-                                      trailing: IconButton(
-                                        icon: const Icon(
-                                          Icons.remove_circle,
-                                          color: Colors.red,
-                                        ),
-                                        onPressed:
-                                            () => removeFromSelected(student),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  Expanded(child: _buildStudentList(selectedStudents, false)),
                 ],
               ),
             ),
-
           const SizedBox(height: 16),
-
           if (showApplyButton)
             Align(
               alignment: Alignment.centerRight,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Cancel resets to initial page state
                   ElevatedButton.icon(
                     onPressed: cancelSelectionChanges,
                     icon: const Icon(Icons.close),
@@ -572,9 +458,13 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
                   ElevatedButton.icon(
                     onPressed: hasChanges ? saveSelectedStudents : null,
                     icon: const Icon(Icons.save),
-                    label: Text("Apply (${selectedStudents.length})"),
+                    label: Text(
+                      "Apply (${selectedStudents.length})",
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: hasChanges ? Colors.blue : Colors.grey,
+                      backgroundColor:
+                          hasChanges ? Color(0xFF0746C5) : Colors.grey,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 22,
@@ -585,6 +475,98 @@ class MentorStudentSelectorPageState extends State<MentorStudentSelectorPage> {
                 ],
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentList(List<Map<String, dynamic>> students, bool isAll) {
+    return Container(
+      height: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.white),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(isAll ? Icons.school : Icons.check_circle_outline, size: 20),
+              const SizedBox(width: 6),
+              Text(
+                isAll
+                    ? "All Students (${students.length})"
+                    : "Selected Students (${students.length})",
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const Divider(),
+          Expanded(
+            child: Scrollbar(
+              thumbVisibility: true,
+              child: ListView.builder(
+                itemCount: students.length,
+                itemBuilder: (context, index) {
+                  final sorted = [...students]..sort(
+                    (a, b) => (a['rollNo'] as String).compareTo(
+                      b['rollNo'] as String,
+                    ),
+                  );
+                  final student = sorted[index];
+                  final roll = student['rollNo'] as String;
+                  final name = student['name'] as String;
+                  final isSelected = selectedStudents.any(
+                    (s) => s['rollNo'] == roll,
+                  );
+                  final isFrozen = frozenRollNos.contains(roll);
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    color:
+                        isAll && isFrozen
+                            ? const Color.fromARGB(255, 21, 184, 3)
+                            : null,
+                    child: ListTile(
+                      title: Text(
+                        "$roll - $name",
+                        style: TextStyle(
+                          color: isAll && isFrozen ? Colors.white : null,
+                        ),
+                      ),
+                      trailing:
+                          isAll
+                              ? (isFrozen
+                                  ? const Icon(Icons.lock, color: Colors.white)
+                                  : Icon(
+                                    isSelected
+                                        ? Icons.check_circle
+                                        : Icons.circle_outlined,
+                                    color: isSelected ? Colors.green : null,
+                                  ))
+                              : IconButton(
+                                icon: const Icon(
+                                  Icons.remove_circle,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () => removeFromSelected(student),
+                              ),
+                      onTap:
+                          isAll && isFrozen
+                              ? null
+                              : () => toggleStudentSelection(student),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );

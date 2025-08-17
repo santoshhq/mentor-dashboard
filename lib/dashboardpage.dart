@@ -5,6 +5,7 @@ import 'package:hod_web_dashboard/applogin_page.dart';
 import 'package:hod_web_dashboard/firebase_service.dart';
 import 'package:hod_web_dashboard/login_page.dart';
 import 'package:hod_web_dashboard/mentors/mentors_page.dart';
+import 'package:hod_web_dashboard/hodstudentattendancedialog.dart';
 import 'package:intl/intl.dart';
 import 'package:hod_web_dashboard/firebase_service.dart' as firebase_service;
 import 'package:table_calendar/table_calendar.dart';
@@ -24,8 +25,7 @@ class _DashboardPageState extends State<DashboardPage> {
   String? selectedBranch;
   int selectedIndex = 0;
   String? selectedYear;
-  DateTime selectedDate =
-      DateTime.now(); // 👈 This stores the current or selected date
+  DateTime selectedDate = DateTime.now();
   List<DateTime> availableDates = [];
 
   final firebase_service.FirebaseService firebaseService =
@@ -56,120 +56,6 @@ class _DashboardPageState extends State<DashboardPage> {
       _isLoading = false;
     });
   }
-
-  /*Future<void> showCustomDatePicker({
-    required BuildContext context,
-    required DateTime selectedDate,
-    required List<DateTime> availableDates,
-    required void Function(DateTime) onDateSelected,
-  }) async {
-    if (availableDates.isEmpty) return;
-
-    DateTime tempSelectedDate = selectedDate;
-
-    final firstAvailable = availableDates.reduce(
-      (a, b) => a.isBefore(b) ? a : b,
-    );
-    final lastAvailable = availableDates.reduce((a, b) => a.isAfter(b) ? a : b);
-
-    await showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (ctx) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          backgroundColor: Colors.white,
-          child: Container(
-            width: 400, // Ideal for web dialog
-            height: 500, // Fixed height like your reference image
-            padding: const EdgeInsets.all(20),
-            child: StatefulBuilder(
-              builder: (context, setState) {
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    TableCalendar(
-                      firstDay: DateTime.now().subtract(
-                        const Duration(days: 60),
-                      ),
-                      lastDay: DateTime.now(),
-                      focusedDay: tempSelectedDate,
-                      selectedDayPredicate:
-                          (day) => isSameDay(tempSelectedDate, day),
-                      onDaySelected: (selected, focused) {
-                        if (availableDates.any((d) => isSameDay(d, selected))) {
-                          setState(() {
-                            tempSelectedDate = selected;
-                          });
-                        }
-                      },
-                      calendarStyle: CalendarStyle(
-                        todayDecoration: BoxDecoration(
-                          color: Colors.green.shade600, // ✅ mark today
-                          shape: BoxShape.circle,
-                        ),
-                        selectedDecoration: const BoxDecoration(
-                          color: Colors.black,
-                          shape: BoxShape.circle,
-                        ),
-                        selectedTextStyle: const TextStyle(color: Colors.white),
-                        defaultTextStyle: const TextStyle(fontSize: 14),
-                        weekendTextStyle: const TextStyle(color: Colors.red),
-                      ),
-                      headerStyle: const HeaderStyle(
-                        titleCentered: true,
-                        formatButtonVisible: false,
-                        leftChevronIcon: Icon(Icons.chevron_left),
-                        rightChevronIcon: Icon(Icons.chevron_right),
-                      ),
-                      daysOfWeekStyle: const DaysOfWeekStyle(
-                        weekdayStyle: TextStyle(fontWeight: FontWeight.w500),
-                        weekendStyle: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                      enabledDayPredicate: (day) {
-                        return availableDates.any(
-                          (d) =>
-                              d.year == day.year &&
-                              d.month == day.month &&
-                              d.day == day.day,
-                        );
-                      },
-                      availableCalendarFormats: const {
-                        CalendarFormat.month: 'Month',
-                      },
-                    ),
-                    const Spacer(),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          child: const Text("Cancel"),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.black,
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () {
-                            onDateSelected(tempSelectedDate);
-                            Navigator.pop(context);
-                          },
-                          child: const Text("Apply"),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }*/
 
   Future<void> _loadAvailableDates() async {
     availableDates =
@@ -212,16 +98,8 @@ class _DashboardPageState extends State<DashboardPage> {
         );
       case 1:
         return MentorsPage(firebaseService: firebaseService);
-
       case 2:
-        return const AppLoginPage(); // will now display inside your DashboardPage
-      case 3:
-        return Center(
-          child: Text(
-            'Settings Page (Coming Soon)',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        );
+        return const AppLoginPage();
       default:
         return Center(
           child: Text(
@@ -261,11 +139,11 @@ class _DashboardPageState extends State<DashboardPage> {
       Icons.dashboard,
       Icons.person,
       Icons.app_registration_outlined,
-      Icons.settings,
+
       Icons.logout,
     ];
 
-    final labels = ['Dashboard', 'Mentors', 'App Login', 'Settings', 'Log Out'];
+    final labels = ['Dashboard', 'Mentors', 'App Login', 'Log Out'];
 
     return Container(
       width: 220,
@@ -403,13 +281,10 @@ class _DashboardPageState extends State<DashboardPage> {
                           ),
                         ),
                   );
-
                   if (shouldLogout == true) {
                     FirebaseService()
                         .markDisposedOrLoggedOut(); // ✅ Prevent background fetches
-
                     await FirebaseAuth.instance.signOut();
-
                     if (!mounted) return;
                     Navigator.pushAndRemoveUntil(
                       context,
@@ -417,6 +292,17 @@ class _DashboardPageState extends State<DashboardPage> {
                       (route) => false,
                     );
                   }
+                }
+                // --- This part reloads dashboard data when tab is selected ---
+                else if (labels[i] == 'Dashboard') {
+                  setState(() {
+                    selectedIndex = i;
+                    _isLoading = true;
+                  });
+                  await _loadYearData(); // 👈 This reloads strength table and attendance
+                  setState(() {
+                    _isLoading = false;
+                  });
                 } else {
                   setState(() {
                     selectedIndex = i;
@@ -434,7 +320,6 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
-  /// Builds the top navigation bar with welcome message and search.
   Widget _buildTopBar() {
     return Container(
       color: const Color(0xFF0746C5),
@@ -442,32 +327,113 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Welcome To HOD Dashboard',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons
+                    .dashboard_customize_rounded, // Best fit for "HOD Dashboard"
+                color: Colors.white,
+                size: 38, // matches font, slightly larger for prominence
+              ),
+              const SizedBox(width: 14), // Space between icon and text
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Welcome To ',
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    TextSpan(
+                      text: 'HOD Dashboard',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w900,
+                        color:
+                            Colors.white, // or use an accent color if you wish
+                        letterSpacing: 3,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black38,
+                            offset: Offset(0, 3),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
+
           Row(
             children: [
               Container(
-                width: 250,
-                padding: const EdgeInsets.symmetric(horizontal: 15),
+                width: 320,
+                margin: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: Colors.grey.shade300, width: 1.4),
                 ),
-                child: const TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Search here',
-                    border: InputBorder.none,
+                child: TextField(
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.4,
                   ),
+                  decoration: InputDecoration(
+                    hintText: 'Search Roll No...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Colors.grey.shade600,
+                      size: 26,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 0,
+                    ),
+                    border: InputBorder.none,
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(28),
+                      borderSide: BorderSide(
+                        color: Color(0xFF0746C5),
+                        width: 2.2,
+                      ),
+                    ),
+                  ),
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (value) {
+                    final rollNo = value.trim().toUpperCase();
+                    if (rollNo.isNotEmpty) {
+                      showDialog(
+                        context: context,
+                        builder:
+                            (_) => HodStudentAttendanceDialog(rollNo: rollNo),
+                      );
+                    }
+                  },
                 ),
               ),
-              const SizedBox(width: 10),
-              const Icon(Icons.search, color: Colors.white),
 
               // 🔁 Refresh IconButton
               const SizedBox(width: 12),
@@ -705,13 +671,12 @@ class _DashboardPageState extends State<DashboardPage> {
           debugPrint("🔥 ERROR reading students: $e");
         });
 
-    // ✅ Only refresh the attended cache when section changes
     if (!FirebaseService.instance.isDisposedOrLoggedOut) {
       FirebaseService.instance
           .fetchYearAttendanceData(
             yearCleaned,
             forceRefresh: true,
-            forDate: selectedDate, // ✅ Respect selected date
+            forDate: selectedDate,
           )
           .then((freshData) {
             if (!mounted || FirebaseService.instance.isDisposedOrLoggedOut)
@@ -846,12 +811,15 @@ Widget buildYearTable({
   required String title,
   required List<List<dynamic>> data,
   required int total,
-  Color? color, // Optional solid color
-  Gradient? gradient, // Optional gradient
+  Color? color,
+  Gradient? gradient,
   String? selectedBranch,
   String? selectedYear,
   void Function(String year, String branch)? onRowTap,
 }) {
+  final attended = data.fold<int>(0, (sum, row) => sum + (row[2] as int));
+  final percent = total > 0 ? ((attended / total) * 100).round() : 0;
+
   return Container(
     margin: const EdgeInsets.only(top: 20),
     decoration: BoxDecoration(
@@ -883,7 +851,7 @@ Widget buildYearTable({
           ),
         ),
 
-        // Table content with dynamic rows
+        // Single Table containing header, body, and footer
         Table(
           columnWidths: const {
             0: FlexColumnWidth(2),
@@ -897,7 +865,7 @@ Widget buildYearTable({
           children: [
             // Table Header Row
             TableRow(
-              decoration: BoxDecoration(color: Colors.grey[1000]),
+              decoration: BoxDecoration(color: Colors.grey[200]),
               children: [
                 tableHeader("Branch"),
                 tableHeader("Strength"),
@@ -906,7 +874,7 @@ Widget buildYearTable({
               ],
             ),
 
-            // Table Body Rows
+            // Data Rows
             ...data.map((row) {
               final isSelected =
                   selectedBranch == row[0] &&
@@ -921,55 +889,45 @@ Widget buildYearTable({
                   isSelected ? Colors.white : Colors.black87;
 
               return TableRow(
-                decoration: BoxDecoration(
-                  color: Colors.transparent,
-                  border:
-                      isSelected
-                          ? Border.all(color: rowBgColor, width: 2)
-                          : null,
-                ),
                 children:
                     row.map((cell) {
                       return GestureDetector(
                         onTap: () {
-                          if (onRowTap != null)
+                          if (onRowTap != null) {
                             onRowTap(title.split(" ").first, row[0]);
+                          }
                         },
-                        child: Padding(
+                        child: Container(
                           padding: const EdgeInsets.symmetric(
-                            vertical: 6,
+                            vertical: 10,
                             horizontal: 8,
                           ),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 10,
-                              horizontal: 8,
+                          decoration: BoxDecoration(
+                            color: isSelected ? rowBgColor : Colors.white,
+                            borderRadius: BorderRadius.circular(
+                              isSelected ? 8 : 0,
                             ),
-                            decoration: BoxDecoration(
-                              color: isSelected ? rowBgColor : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow:
-                                  isSelected
-                                      ? [
-                                        BoxShadow(
-                                          color: rowBgColor.withOpacity(0.4),
-                                          blurRadius: 8,
-                                          offset: const Offset(0, 3),
-                                        ),
-                                      ]
-                                      : [],
-                            ),
-                            child: Center(
-                              child: Text(
-                                cell.toString(),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: rowTextColor,
-                                  fontWeight:
-                                      isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.normal,
-                                ),
+                            boxShadow:
+                                isSelected
+                                    ? [
+                                      BoxShadow(
+                                        color: rowBgColor.withOpacity(0.4),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ]
+                                    : [],
+                          ),
+                          child: Center(
+                            child: Text(
+                              cell.toString(),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: rowTextColor,
+                                fontWeight:
+                                    isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                               ),
                             ),
                           ),
@@ -978,39 +936,63 @@ Widget buildYearTable({
                     }).toList(),
               );
             }),
-          ],
-        ),
 
-        // Footer
-        // Footer with actual attended and percentage
-        Builder(
-          builder: (_) {
-            final attended = data.fold<int>(
-              0,
-              (sum, row) =>
-                  sum + (row[2] as int), // Column index 2 = present count
-            );
-            final percent = total > 0 ? ((attended / total) * 100).round() : 0;
-
-            return Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            // Footer Row inside the Tableca
+            TableRow(
               decoration: BoxDecoration(
                 gradient: gradient,
                 color: gradient == null ? color?.withOpacity(0.85) : null,
-                borderRadius: const BorderRadius.vertical(
-                  bottom: Radius.circular(12),
-                ),
               ),
-              child: Text(
-                "$title Total: $total   Attended: $attended   $percent%",
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Text(
+                    "$title Total:",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-              ),
-            );
-          },
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Center(
+                    child: Text(
+                      "$total",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Center(
+                    child: Text(
+                      "$attended",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Center(
+                    child: Text(
+                      "$percent%",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     ),

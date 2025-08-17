@@ -4,8 +4,10 @@ import 'package:hod_web_dashboard/applogin_page.dart';
 import 'package:hod_web_dashboard/attendanceform.dart';
 import 'package:hod_web_dashboard/dashboardpage.dart';
 import 'package:hod_web_dashboard/firebase_service.dart';
+import 'package:hod_web_dashboard/hodstudentattendancedialog.dart';
 import 'package:hod_web_dashboard/login_page.dart';
 import 'package:hod_web_dashboard/firebase_service.dart' as firebase_service;
+import 'package:hod_web_dashboard/mentors/mentor_student_upload_page.dart';
 import 'package:hod_web_dashboard/mentors/mentorstudentselectoin.dart';
 import 'package:hod_web_dashboard/sidebar_item.dart';
 import 'package:intl/intl.dart';
@@ -23,7 +25,13 @@ class MentorDashboardPage extends StatefulWidget {
 class _MentorDashboardPageState extends State<MentorDashboardPage> {
   final GlobalKey<MentorStudentSelectorPageState> _studentSelectorKey =
       GlobalKey<MentorStudentSelectorPageState>();
+  final GlobalKey<MentorStudentUploadPageState> _studentUploadKey =
+      GlobalKey<MentorStudentUploadPageState>();
+  final Set<String> _selectedStudentRollNos = {};
+  Set<String> _currentSelectedRollNos = {};
   Map<String, int> _sectionStrengthMap = {};
+
+  Set<String> _currentFrozenRollNos = {};
 
   final Map<String, List<List<dynamic>>> _yearDataCache = {};
   String? selectedBranch;
@@ -243,8 +251,97 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
                           ? _buildBody()
                           : selectedIndex == 1
                           ? MentorStudentSelectorPage(
-                            key: _studentSelectorKey, // ✅ Pass the key
+                            key: _studentSelectorKey,
                             mentorUserId: widget.mentorUserId,
+                            onSelectedRollNosChanged: (rollNos) {
+                              setState(() {
+                                _currentSelectedRollNos = rollNos;
+                              });
+                            },
+                          )
+                          : selectedIndex == 2
+                          ? MentorStudentUploadPage(
+                            key: _studentUploadKey,
+                            mentorUserId: widget.mentorUserId,
+                            assignedSections: assignedSections,
+                            selectedStudentRollNos: Set<String>.from(
+                              _currentSelectedRollNos,
+                            ), // ⬅ From Selector page
+                            onCacheUpdate: (
+                              String endYear,
+                              List<List<dynamic>> updatedData,
+                            ) async {
+                              // 🔄 Refresh section strength counts for only this endYear
+                              final Map<String, int> freshCounts = {};
+                              final sectionsForYear = assignedSections.where(
+                                (e) => e['batch'] == endYear,
+                              );
+
+                              for (final sec in sectionsForYear) {
+                                final sectionKey = "$endYear-${sec['section']}";
+                                try {
+                                  final doc =
+                                      await FirebaseFirestore.instance
+                                          .collection('mentors')
+                                          .doc(widget.mentorUserId)
+                                          .collection('assignedStudents')
+                                          .doc(sectionKey)
+                                          .get();
+
+                                  if (doc.exists && doc.data() != null) {
+                                    final selectedRollNos = List<String>.from(
+                                      doc.data()!['selectedRollNos'] ?? [],
+                                    );
+                                    freshCounts[sectionKey] =
+                                        selectedRollNos.length;
+                                  } else {
+                                    freshCounts[sectionKey] = 0;
+                                  }
+                                } catch (_) {
+                                  freshCounts[sectionKey] = 0;
+                                }
+                              }
+
+                              // Update _sectionStrengthMap with fresh counts
+                              setState(() {
+                                _sectionStrengthMap.addAll(freshCounts);
+                              });
+
+                              // Now rebuild the year data cache with the new counts
+                              final allowedBranches =
+                                  assignedSections
+                                      .where((e) => e['batch'] == endYear)
+                                      .map(
+                                        (e) =>
+                                            "${e['department']}-${e['section']}",
+                                      )
+                                      .toSet();
+
+                              final filtered =
+                                  updatedData
+                                      .where(
+                                        (row) =>
+                                            allowedBranches.contains(row[0]),
+                                      )
+                                      .map((row) {
+                                        final secKey =
+                                            "$endYear-${row[0].split('-')[1]}";
+                                        final strength =
+                                            _sectionStrengthMap[secKey] ??
+                                            row[1];
+                                        return [
+                                          row[0],
+                                          strength,
+                                          row[2],
+                                          row[3],
+                                        ];
+                                      })
+                                      .toList();
+
+                              setState(() {
+                                _yearDataCache[endYear] = filtered;
+                              });
+                            },
                           )
                           : Container(),
                 ),
@@ -257,8 +354,14 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
   }
 
   Widget _buildSidebar() {
-    final items = [Icons.dashboard, Icons.people, Icons.logout];
-    final labels = ['Dashboard', 'Students', 'Log Out'];
+    // Added upload icon and label in correct order
+    final items = [
+      Icons.dashboard,
+      Icons.people,
+      Icons.upload_file,
+      Icons.logout,
+    ];
+    final labels = ['Dashboard', 'Students', 'Upload', 'Log Out'];
 
     return Container(
       width: 220,
@@ -290,9 +393,9 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
                           elevation: 10,
                           backgroundColor: Colors.white,
                           child: ConstrainedBox(
-                            constraints: BoxConstraints(
+                            constraints: const BoxConstraints(
                               minWidth: 300,
-                              maxWidth: 400, // good for web dialogs
+                              maxWidth: 400,
                             ),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
@@ -304,8 +407,8 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
                                 children: [
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text(
+                                    children: const [
+                                      Text(
                                         "Confirm Logout?",
                                         style: TextStyle(
                                           fontSize: 22,
@@ -314,15 +417,14 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
                                         ),
                                         textAlign: TextAlign.center,
                                       ),
-                                      const SizedBox(width: 8),
-                                      const Icon(
+                                      SizedBox(width: 8),
+                                      Icon(
                                         Icons.exit_to_app_outlined,
                                         size: 28,
                                         color: Colors.red,
                                       ),
                                     ],
                                   ),
-
                                   const SizedBox(height: 16),
                                   const Text(
                                     "Are you sure want to logout?",
@@ -468,29 +570,73 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
             ],
           ),
 
-          // 🔁 Refresh to Today Button
+          //  Refresh to Today Button
           Row(
             children: [
-              SizedBox(
-                width: 300,
+              Container(
+                width: 320,
+                margin: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(28),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
+                  border: Border.all(color: Colors.grey.shade300, width: 1.4),
+                ),
                 child: TextField(
-                  style: const TextStyle(color: Colors.black87),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.4,
+                  ),
                   decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white,
-                    hintText: 'Search...',
-                    prefixIcon: const Icon(Icons.search),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
+                    hintText: 'Search Roll No...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade500,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: Colors.grey.shade600,
+                      size: 26,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 0,
+                    ),
+                    border: InputBorder.none,
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(28),
+                      borderSide: BorderSide(
+                        color: Color(0xFF0746C5),
+                        width: 2.2,
+                      ),
                     ),
                   ),
+                  textInputAction: TextInputAction.search,
+                  onSubmitted: (value) {
+                    final rollNo = value.trim().toUpperCase();
+                    if (rollNo.isNotEmpty) {
+                      showDialog(
+                        context: context,
+                        builder:
+                            (_) => HodStudentAttendanceDialog(rollNo: rollNo),
+                      );
+                    }
+                  },
                 ),
               ),
+
               const SizedBox(width: 16),
 
-              // 🔁 Refresh IconButton
+              //  Refresh IconButton
               IconButton(
                 icon: const Icon(Icons.refresh, color: Colors.white),
                 tooltip: 'Refresh',
@@ -505,6 +651,7 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
                     });
                     await _loadMentorData();
                     setState(() => _isLoading = false);
+
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         backgroundColor: const Color(0xFF0746C5),
@@ -518,12 +665,14 @@ class _MentorDashboardPageState extends State<MentorDashboardPage> {
                             ),
                           ],
                         ),
-                        // duration: Duration(seconds: 2), // optional
                       ),
                     );
                   } else if (selectedIndex == 1) {
                     // Student selector refresh
                     _studentSelectorKey.currentState?.refreshPage();
+                  } else if (selectedIndex == 2) {
+                    // Student upload refresh
+                    _studentUploadKey.currentState?.refreshPage();
                   }
                 },
               ),

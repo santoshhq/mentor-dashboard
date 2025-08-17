@@ -206,7 +206,6 @@ class _LoginPageState extends State<LoginPage> {
                                 errorText: _usernameError,
                               ),
                             ),
-
                             const SizedBox(height: 15),
                             TextField(
                               controller: _passwordController,
@@ -230,6 +229,23 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 errorText: _passwordError,
                               ),
+                              // Added callback — ENTER in password triggers login
+                              onSubmitted: (_) {
+                                setState(() {
+                                  _usernameError =
+                                      _usernameController.text.trim().isEmpty
+                                          ? "Please enter username"
+                                          : null;
+                                  _passwordError =
+                                      _passwordController.text.trim().isEmpty
+                                          ? "Please enter a valid password"
+                                          : null;
+                                });
+                                if (_usernameError == null &&
+                                    _passwordError == null) {
+                                  _loginUser();
+                                }
+                              },
                             ),
                             if (_failedAttempts >= 2 && isHodLogin)
                               Align(
@@ -239,7 +255,6 @@ class _LoginPageState extends State<LoginPage> {
                                   child: const Text("Forgot Password?"),
                                 ),
                               ),
-
                             const SizedBox(height: 20),
                             SizedBox(
                               width: double.infinity,

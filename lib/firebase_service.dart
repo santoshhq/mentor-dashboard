@@ -35,12 +35,58 @@ class FirebaseService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> fetchStudentAttendance(
+    String rollNo,
+    DateTime start,
+    DateTime end,
+  ) async {
+    final querySnapshot =
+        await FirebaseFirestore.instance
+            .collectionGroup("attendance") // adjust to your structure
+            .where("rollNo", isEqualTo: rollNo)
+            .where("date", isGreaterThanOrEqualTo: Timestamp.fromDate(start))
+            .where("date", isLessThanOrEqualTo: Timestamp.fromDate(end))
+            .orderBy("date", descending: true)
+            .get();
+
+    return querySnapshot.docs.map((doc) => doc.data()).toList();
+  }
+
   void markDisposedOrLoggedOut() {
     _isDisposedOrLoggedOut = true;
   }
 
   void resetState() {
     _isDisposedOrLoggedOut = false;
+  }
+
+  // Fetch roll numbers selected by any mentor for this batch-section
+  Future<Set<String>> getGloballySelectedRollNos({
+    required String batch,
+    required String section,
+  }) async {
+    final docId = '$batch-$section';
+    final mentorsSnapshot =
+        await FirebaseFirestore.instance.collection('mentors').get();
+    final Set<String> allSelected = {};
+
+    for (final mentorDoc in mentorsSnapshot.docs) {
+      final userId = mentorDoc.data()['userId'];
+      if (userId == null) continue;
+      final assignedStudentsRef = FirebaseFirestore.instance
+          .collection('mentors')
+          .doc(userId)
+          .collection('assignedStudents')
+          .doc(docId);
+      final sectionDoc = await assignedStudentsRef.get();
+      if (sectionDoc.exists && sectionDoc.data() != null) {
+        final rollNos = List<String>.from(
+          sectionDoc.data()!['selectedRollNos'] ?? [],
+        );
+        allSelected.addAll(rollNos.map((e) => e.trim().toUpperCase()));
+      }
+    }
+    return allSelected;
   }
 
   bool get isDisposedOrLoggedOut => _isDisposedOrLoggedOut;

@@ -1,3 +1,6 @@
+import 'dart:convert'; // For utf8.encode
+import 'dart:html' as html; // For Flutter Web download
+import 'package:csv/csv.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hod_web_dashboard/firebase_service.dart';
@@ -27,6 +30,7 @@ class AttendanceForm extends StatefulWidget {
 
 class _AttendanceFormState extends State<AttendanceForm> {
   late Future<List<Map<String, dynamic>>> _studentsFuture;
+  List<Map<String, dynamic>> _lastFetchedStudents = [];
 
   @override
   void initState() {
@@ -50,6 +54,7 @@ class _AttendanceFormState extends State<AttendanceForm> {
       selectedDate: widget.selectedDate,
       mentorUserId: widget.mentorUserId, // ✅ Pass if exists
     ).then((data) {
+      _lastFetchedStudents = data; // Save for CSV export
       widget.onCacheUpdate?.call(data);
       return data;
     });
@@ -268,14 +273,67 @@ class _AttendanceFormState extends State<AttendanceForm> {
     return students;
   }
 
+  void _downloadCSV() {
+    final filtered =
+        _lastFetchedStudents
+            .where(
+              (s) =>
+                  s['status'] == 'noScan' ||
+                  s['status'] == 'partial' ||
+                  s['status'] == 'less_than_5h',
+            )
+            .toList();
+
+    if (filtered.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No students to download')));
+      return;
+    }
+
+    final rows = [
+      ['Roll No', 'Name', 'Status'],
+    ];
+
+    for (var s in filtered) {
+      rows.add([s['rollNo'], s['name'], s['status']]);
+    }
+
+    final csvData = const ListToCsvConverter().convert(rows);
+    final bytes = utf8.encode(csvData);
+    final blob = html.Blob([bytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    final anchor =
+        html.AnchorElement(href: url)
+          ..setAttribute(
+            "download",
+            "absent_students_${widget.branchName}_${widget.selectedDate.toIso8601String()}.csv",
+          )
+          ..click();
+    html.Url.revokeObjectUrl(url);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Attendance Sheet - ${widget.branchName}",
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Attendance Sheet - ${widget.branchName}",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+            IconButton(
+              icon: const Icon(
+                Icons.download,
+                color: Color.fromARGB(137, 16, 16, 16),
+              ),
+              tooltip: "Download",
+              onPressed: _downloadCSV,
+            ),
+          ],
         ),
         const Divider(),
         Expanded(
