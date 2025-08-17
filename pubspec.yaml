@@ -39,6 +39,10 @@ dependencies:
   cloud_firestore: ^5.6.11
   intl: ^0.20.2
   marquee: ^2.3.0
+  table_calendar: ^3.2.0
+  google_fonts: ^6.3.0
+  lucide_icons_flutter: ^3.0.8
+  csv: ^6.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
