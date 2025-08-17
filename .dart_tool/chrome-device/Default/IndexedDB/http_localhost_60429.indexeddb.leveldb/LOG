@@ -1,0 +1,14 @@
+2025/08/10-16:08:06.589 6300 Reusing MANIFEST C:\Users\santo\AppData\Local\Temp\flutter_tools.c8eada31\flutter_tools_chrome_device.9199e112\Default\IndexedDB\http_localhost_60429.indexeddb.leveldb/MANIFEST-000001
+2025/08/10-16:08:06.591 6300 Recovering log #13
+2025/08/10-16:08:06.593 6300 Reusing old log C:\Users\santo\AppData\Local\Temp\flutter_tools.c8eada31\flutter_tools_chrome_device.9199e112\Default\IndexedDB\http_localhost_60429.indexeddb.leveldb/000013.log 
+2025/08/10-16:08:06.594 6300 Delete type=2 #11
+2025/08/10-16:08:06.715 3888 Level-0 table #18: started
+2025/08/10-16:08:06.720 3888 Level-0 table #18: 930 bytes OK
+2025/08/10-16:08:06.724 3888 Delete type=0 #13
+2025/08/10-16:08:06.726 6300 Manual compaction at level-0 from '\x00\x07\x00\x00\x00' @ 72057594037927935 : 1 .. '\x00\x08\x00\x00\x00' @ 0 : 0; will stop at '\x00\x07\x00\x00\x05' @ 233 : 1
+2025/08/10-16:08:06.727 6300 Compacting 1@0 + 1@1 files
+2025/08/10-16:08:06.734 6300 Generated table #19@0: 15 keys, 664 bytes
+2025/08/10-16:08:06.734 6300 Compacted 1@0 + 1@1 files => 664 bytes
+2025/08/10-16:08:06.736 6300 compacted to: files[ 0 1 1 0 0 0 0 ]
+2025/08/10-16:08:06.737 6300 Delete type=2 #18
+2025/08/10-16:08:06.739 3888 Manual compaction at level-0 from '\x00\x07\x00\x00\x05' @ 233 : 1 .. '\x00\x08\x00\x00\x00' @ 0 : 0; will stop at (end)
